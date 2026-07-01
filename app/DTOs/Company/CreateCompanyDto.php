@@ -10,7 +10,7 @@ class CreateCompanyDto
     ) {}
 
     /**
-     * Permite construir el DTO de forma limpia desde un array (como el Request validado)
+     *  DTO de  desde un array 
      */
     public static function fromArray(array $data): self
     {
@@ -20,9 +20,6 @@ class CreateCompanyDto
         );
     }
 
-    /**
-     * Convierte el DTO a array si el Repositorio de Eloquent lo necesita
-     */
     public function toArray(): array
     {
         return [
