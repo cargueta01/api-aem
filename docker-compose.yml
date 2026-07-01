@@ -24,12 +24,16 @@ services:
       SESSION_DRIVER: database
       QUEUE_CONNECTION: database
       JWT_SECRET: ${JWT_SECRET:-aem-local-jwt-secret-change-me-2026}
+      AEM_ADMIN_NAME: "${AEM_ADMIN_NAME:-Admin AEM}"
+      AEM_ADMIN_EMAIL: "${AEM_ADMIN_EMAIL:-admin@aem.test}"
+      AEM_ADMIN_PASSWORD: "${AEM_ADMIN_PASSWORD:-password}"
     depends_on:
       db-postgres:
         condition: service_healthy
     command: >
       sh -c "php artisan config:clear
       && php artisan migrate --force
+      && php artisan db:seed --force
       && php artisan l5-swagger:generate
       && php artisan serve --host=0.0.0.0 --port=8000"
     healthcheck:
@@ -67,3 +71,5 @@ networks:
 volumes:
   db-data-aem:
     driver: local
+
+
