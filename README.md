@@ -1,8 +1,17 @@
+## Funcionalidades implementadas
+
+- CRUD para Companys, Enterprises y Branchs.
+- Arquitectura Controller → DTO → Service → Repository.
+- Autenticación mediante JWT.
+- Documentación con Swagger/OpenAPI.
+- Docker Compose con PostgreSQL.
+- Pruebas automatizadas.
+
 # API AEM
 
-API REST desarrollada con Laravel para la gestion de infraestructura comercial.
+API REST desarrollada con Laravel para la gestión de infraestructura comercial.
 
-## Tecnologias
+## Tecnologías
 
 - PHP 8.3
 - Laravel 13
@@ -14,151 +23,105 @@ API REST desarrollada con Laravel para la gestion de infraestructura comercial.
 
 ## Arquitectura
 
-```txt
-Controller -> DTO -> Service -> Repository -> Model
+```
+Controller → DTO → Service → Repository → Model
 ```
 
-## Ejecutar el Proyecto
+## Ejecutar el proyecto
 
 ```bash
 docker compose up --build
 ```
 
-Si necesitas reiniciar la base de datos desde cero:
+Si deseas reiniciar completamente la base de datos:
 
 ```bash
 docker compose down -v
 docker compose up --build
 ```
 
-Durante el arranque, el contenedor ejecuta automaticamente:
+Durante el inicio, la aplicación ejecuta automáticamente:
 
-```bash
-php artisan migrate --force
-php artisan db:seed --force
-php artisan l5-swagger:generate
-php artisan serve --host=0.0.0.0 --port=8000
-```
+- Migraciones
+- Seeders
+- Generación de la documentación Swagger
 
-La aplicacion estara disponible en:
+## Accesos
 
-- API: http://localhost:8000
-- Swagger: http://localhost:8000/docs
-- Health Check: http://localhost:8000/up
+| Servicio | URL |
+|----------|-----|
+| API | http://localhost:8000 |
+| Swagger | http://localhost:8000/docs |
+| Health Check | http://localhost:8000/up |
 
-## Usuario Inicial
+## Usuario administrador
 
-El proyecto crea automaticamente un usuario administrador con el seeder principal.
+Se crea automáticamente durante la ejecución de los seeders.
 
-Credenciales por defecto:
+| Campo | Valor |
+|-------|-------|
+| Email | `admin@aem.test` |
+| Password | `password` |
 
-```txt
-Email: admin@aem.test
-Password: password
-```
-
-Estas credenciales pueden modificarse desde variables de entorno antes de levantar Docker:
+Estas credenciales pueden modificarse mediante las siguientes variables de entorno:
 
 ```env
-AEM_ADMIN_NAME="Admin AEM"
+AEM_ADMIN_NAME=Admin AEM
 AEM_ADMIN_EMAIL=admin@aem.test
 AEM_ADMIN_PASSWORD=password
 ```
 
-## Autenticacion
+## Autenticación
 
 La API utiliza JWT.
 
-Para obtener un token:
+Obtener un token:
 
-```bash
-curl -X POST http://localhost:8000/api/v1/auth/login \
-  -H "Accept: application/json" \
-  -H "Content-Type: application/json" \
-  -d '{"email":"admin@aem.test","password":"password"}'
+```http
+POST /api/v1/auth/login
 ```
 
-Respuesta esperada:
+La respuesta devuelve un **Bearer Token** que debe enviarse en el encabezado:
 
-```json
-{
-  "access_token": "...",
-  "token_type": "bearer",
-  "expires_in": 3600
-}
+```http
+Authorization: Bearer <token>
 ```
 
-Usar el token en endpoints protegidos:
+## Base de datos
 
-```bash
-curl http://localhost:8000/api/v1/companys \
-  -H "Accept: application/json" \
-  -H "Authorization: Bearer TU_TOKEN"
-```
+La solución implementa una estructura jerárquica compuesta por:
 
-## Base de Datos
-
-El proyecto utiliza PostgreSQL con Docker. La API se conecta a la base de datos mediante la red interna de Docker:
-
-```env
-DB_HOST=db-postgres
-```
+- Companys
+- Enterprises
+- Branchs
 
 Las migraciones incluyen:
 
-- Relaciones entre `companys`, `enterprises` y `branchs`.
-- Llaves foraneas.
-- Indices para claves foraneas.
-- Indices para estados.
-- Indices para `doc_number` y `municipality_codigo`.
+- Relaciones entre entidades.
+- Llaves foráneas.
+- Índices para claves foráneas.
+- Índices para campos de estado.
+- Índices para `doc_number` y `municipality_codigo`.
 
-El borrado desde la API se maneja como desactivacion segura, cambiando el estado a `inactive`.
+Las eliminaciones se realizan mediante desactivación lógica cambiando el estado del registro a `inactive`.
 
-## Endpoints Principales
+## Documentación
 
-```txt
-POST /api/v1/auth/login
-GET  /api/v1/auth/me
-POST /api/v1/auth/logout
-POST /api/v1/auth/refresh
+La documentación completa de la API, incluyendo endpoints, parámetros, ejemplos y respuestas, se encuentra disponible en Swagger:
 
-GET    /api/v1/companys
-POST   /api/v1/companys
-GET    /api/v1/companys/{id}
-PUT    /api/v1/companys/{id}
-DELETE /api/v1/companys/{id}
-
-GET    /api/v1/enterprises
-POST   /api/v1/enterprises
-GET    /api/v1/enterprises/{id}
-PUT    /api/v1/enterprises/{id}
-DELETE /api/v1/enterprises/{id}
-
-GET    /api/v1/branchs
-POST   /api/v1/branchs
-GET    /api/v1/branchs/{id}
-PUT    /api/v1/branchs/{id}
-DELETE /api/v1/branchs/{id}
 ```
-
-Filtros de sucursales:
-
-```txt
-GET /api/v1/branchs?enterprise_id=1
-GET /api/v1/branchs?municipality_codigo=0601
-GET /api/v1/branchs?enterprise_id=1&municipality_codigo=0601
+http://localhost:8000/docs
 ```
 
 ## Pruebas
 
-Ejecutar en el entorno local de desarrollo:
+Ejecutar las pruebas:
 
 ```bash
-composer install
 php artisan test
 ```
 
-## Comandos Utiles
+## Comandos útiles
 
 ```bash
 docker compose exec api-server php artisan route:list
