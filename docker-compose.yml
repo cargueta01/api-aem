@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  db-postgres:
+    image: postgres:15-alpine
+    container_name: db-postgres-aem
+    restart: always
+    environment:
+      POSTGRES_DB: aem_backend
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: tu_contrasena_segura
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data-aem:/var/lib/postgresql/data # Volumen nombrado para persistencia
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d aem_backend"]
+      interval: 5s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  db-data-aem: # Definición del volumen nombrado
