@@ -1,58 +1,312 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# API de Gestion de Infraestructura Comercial AEM
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+API REST en Laravel.
 
-## About Laravel
+La solucion implementa tres niveles jerarquicos:
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- `companys`: holding o consorcio principal.
+- `enterprises`: empresas o marcas asociadas a una compania.
+- `branchs`: sucursales fisicas asociadas a una empresa.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Stack Tecnico
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- PHP 8.3
+- Laravel 13
+- PostgreSQL 15
+- JWT para autenticacion
+- L5 Swagger / OpenAPI para documentacion
+- Docker Compose
+- PHPUnit para pruebas automatizadas
 
-## Learning Laravel
+## Arquitectura
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
-
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
-
-```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+```txt
+Controller -> DTO -> Service -> Repository -> Model / Database
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+Responsabilidades principales:
 
-## Contributing
+- `Controller`: recibe HTTP, construye DTOs y retorna JSON.
+- `DTO`: valida y normaliza payloads de entrada.
+- `Service`: contiene reglas de negocio y validaciones complejas.
+- `Repository`: aisla consultas y persistencia con Eloquent.
+- `Model`: representa entidades y relaciones.
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## Servicios Docker
 
-## Code of Conduct
+El entorno Docker levanta dos servicios:
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+- `api-server`: aplicacion Laravel.
+- `db-postgres`: base de datos PostgreSQL.
 
-## Security Vulnerabilities
+Ambos se comunican por la red interna `aem-network`. Laravel no usa `localhost` para conectarse a PostgreSQL dentro de Docker; usa el host interno:
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+```env
+DB_HOST=db-postgres
+```
 
-## License
+PostgreSQL no se expone al host por defecto; la API es el unico servicio publicado.
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+## Levantar el Proyecto
+
+Desde la raiz del proyecto:
+
+```bash
+docker compose up --build
+```
+
+Si quieres reiniciar la base de datos desde cero:
+
+```bash
+docker compose down -v
+docker compose up --build
+```
+
+Durante el arranque, el contenedor de la API ejecuta automaticamente:
+
+```bash
+php artisan config:clear
+php artisan migrate --force
+php artisan l5-swagger:generate
+php artisan serve --host=0.0.0.0 --port=8000
+```
+
+## URLs Principales
+
+Aplicacion:
+
+```txt
+http://localhost:8000
+```
+
+Healthcheck:
+
+```txt
+http://localhost:8000/up
+```
+
+Swagger UI:
+
+```txt
+http://localhost:8000/docs
+```
+
+OpenAPI JSON:
+
+```txt
+http://localhost:8000/docs-json?api-docs.json
+```
+
+## Crear Usuario de Prueba
+
+En otra terminal, con Docker corriendo:
+
+```bash
+docker compose exec api-server php artisan tinker
+```
+
+Dentro de Tinker:
+
+```php
+\App\Models\User::updateOrCreate(
+    ['email' => 'admin@aem.test'],
+    [
+        'name' => 'Admin',
+        'password' => \Illuminate\Support\Facades\Hash::make('password'),
+    ]
+);
+```
+
+## Autenticacion
+
+Login:
+
+```bash
+curl -X POST http://localhost:8000/api/v1/auth/login \
+  -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@aem.test","password":"password"}'
+```
+
+La respuesta devuelve un token JWT:
+
+```json
+{
+  "access_token": "...",
+  "token_type": "bearer",
+  "expires_in": 3600
+}
+```
+
+Usa el token en endpoints protegidos:
+
+```bash
+curl http://localhost:8000/api/v1/companys \
+  -H "Accept: application/json" \
+  -H "Authorization: Bearer TU_TOKEN"
+```
+
+## Endpoints Principales
+
+Autenticacion:
+
+```txt
+POST /api/v1/auth/login
+GET  /api/v1/auth/me
+POST /api/v1/auth/logout
+POST /api/v1/auth/refresh
+```
+
+Companys:
+
+```txt
+GET    /api/v1/companys
+POST   /api/v1/companys
+GET    /api/v1/companys/{id}
+PUT    /api/v1/companys/{id}
+DELETE /api/v1/companys/{id}
+```
+
+Enterprises:
+
+```txt
+GET    /api/v1/enterprises
+POST   /api/v1/enterprises
+GET    /api/v1/enterprises/{id}
+PUT    /api/v1/enterprises/{id}
+DELETE /api/v1/enterprises/{id}
+```
+
+Branchs:
+
+```txt
+GET    /api/v1/branchs
+POST   /api/v1/branchs
+GET    /api/v1/branchs/{id}
+PUT    /api/v1/branchs/{id}
+DELETE /api/v1/branchs/{id}
+```
+
+Filtros obligatorios para sucursales:
+
+```txt
+GET /api/v1/branchs?enterprise_id=1
+GET /api/v1/branchs?municipality_codigo=0601
+GET /api/v1/branchs?enterprise_id=1&municipality_codigo=0601
+```
+
+## Ejemplos de Payload
+
+Crear company:
+
+```json
+{
+  "name": "Grupo AEM",
+  "companys_status": "active"
+}
+```
+
+Crear enterprise:
+
+```json
+{
+  "company_id": 1,
+  "name": "AEM Express",
+  "enterprises_status": "active"
+}
+```
+
+Crear branch:
+
+```json
+{
+  "enterprise_id": 1,
+  "name": "Sucursal Centro",
+  "doc_number": "BR-0001",
+  "municipality_codigo": "0601",
+  "branchs_status": "active"
+}
+```
+
+## Base de Datos
+
+Las migraciones definen:
+
+- Llaves foraneas entre `companys -> enterprises -> branchs`.
+- Indices para llaves foraneas.
+- Indices para campos de estado.
+- Indices para `doc_number` y `municipality_codigo`.
+
+Reglas de integridad implementadas:
+
+- `enterprises.company_id` referencia `companys.id` con `ON DELETE RESTRICT` y `ON UPDATE CASCADE`.
+- `branchs.enterprise_id` referencia `enterprises.id` con `ON DELETE CASCADE` y `ON UPDATE CASCADE`.
+
+El borrado desde la API se maneja como desactivacion segura, cambiando el estado a `inactive`.
+
+## Manejo de Errores
+
+La API retorna errores en JSON y no expone stack traces internos.
+
+Ejemplo:
+
+```json
+{
+  "message": "Resource not found.",
+  "errors": []
+}
+```
+
+Validacion:
+
+```json
+{
+  "message": "Validation failed.",
+  "errors": {
+    "name": ["The name field is required."]
+  }
+}
+```
+
+## Pruebas Automatizadas
+
+Las pruebas usan SQLite en memoria segun `phpunit.xml`.
+
+Para ejecutarlas en el entorno local de desarrollo:
+
+```bash
+composer install
+php artisan test
+```
+
+El Dockerfile de ejecucion instala dependencias de produccion con `--no-dev`, por lo que las pruebas se ejecutan preferiblemente fuera de la imagen de runtime.
+
+## Comandos Utiles
+
+Ver rutas:
+
+```bash
+docker compose exec api-server php artisan route:list
+```
+
+Regenerar Swagger manualmente:
+
+```bash
+docker compose exec api-server php artisan l5-swagger:generate
+```
+
+Ver migraciones:
+
+```bash
+docker compose exec api-server php artisan migrate:status
+```
+
+Ver logs:
+
+```bash
+docker compose logs -f api-server
+```
+
+## Notas de Nomenclatura
+
+El proyecto mantiene los nombres `companys` y `branchs` porque asi aparecen en el requerimiento tecnico y en el contrato de endpoints solicitado. En los modelos Eloquent se define explicitamente `$table` cuando Laravel pluralizaria de otra forma.
