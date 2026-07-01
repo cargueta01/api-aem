@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\DTOs\Company\CreateCompanyDto;
+use App\DTOs\Company\UpdateCompanyDto;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\CompanyStoreRequest;
-use App\Http\Requests\CompanyUpdateRequest;
 use App\Services\CompanyService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -24,9 +24,10 @@ class CompanyController extends Controller
         return response()->json($companies);
     }
 
-    public function store(CompanyStoreRequest $request): JsonResponse
+    public function store(Request $request): JsonResponse
     {
-        $company = $this->companyService->create($request->validated());
+        $dto = CreateCompanyDto::fromRequest($request);
+        $company = $this->companyService->create($dto->toArray());
 
         return response()->json($company, 201);
     }
@@ -36,9 +37,10 @@ class CompanyController extends Controller
         return response()->json($this->companyService->findById($id));
     }
 
-    public function update(CompanyUpdateRequest $request, int $id): JsonResponse
+    public function update(Request $request, int $id): JsonResponse
     {
-        $company = $this->companyService->update($id, $request->validated());
+        $dto = UpdateCompanyDto::fromRequest($request);
+        $company = $this->companyService->update($id, $dto->toArray());
 
         return response()->json($company);
     }

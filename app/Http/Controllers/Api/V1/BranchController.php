@@ -2,12 +2,13 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\DTOs\Branch\BranchFiltersDto;
+use App\DTOs\Branch\CreateBranchDto;
+use App\DTOs\Branch\UpdateBranchDto;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\BranchIndexRequest;
-use App\Http\Requests\BranchStoreRequest;
-use App\Http\Requests\BranchUpdateRequest;
 use App\Services\BranchService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class BranchController extends Controller
 {
@@ -15,24 +16,22 @@ class BranchController extends Controller
         private readonly BranchService $branchService
     ) {}
 
-    public function index(BranchIndexRequest $request): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $filters = $request->safe()->only([
-            'enterprise_id',
-            'municipality_codigo',
-        ]);
+        $dto = BranchFiltersDto::fromRequest($request);
 
         $branches = $this->branchService->paginate(
-            $filters,
-            (int) $request->query('per_page', 15)
+            $dto->filters(),
+            $dto->perPage
         );
 
         return response()->json($branches);
     }
 
-    public function store(BranchStoreRequest $request): JsonResponse
+    public function store(Request $request): JsonResponse
     {
-        $branch = $this->branchService->create($request->validated());
+        $dto = CreateBranchDto::fromRequest($request);
+        $branch = $this->branchService->create($dto->toArray());
 
         return response()->json($branch, 201);
     }
@@ -42,9 +41,10 @@ class BranchController extends Controller
         return response()->json($this->branchService->findById($id));
     }
 
-    public function update(BranchUpdateRequest $request, int $id): JsonResponse
+    public function update(Request $request, int $id): JsonResponse
     {
-        $branch = $this->branchService->update($id, $request->validated());
+        $dto = UpdateBranchDto::fromRequest($request);
+        $branch = $this->branchService->update($id, $dto->toArray());
 
         return response()->json($branch);
     }

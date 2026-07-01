@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\DTOs\Enterprise\CreateEnterpriseDto;
+use App\DTOs\Enterprise\UpdateEnterpriseDto;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\EnterpriseStoreRequest;
-use App\Http\Requests\EnterpriseUpdateRequest;
 use App\Services\EnterpriseService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -24,9 +24,10 @@ class EnterpriseController extends Controller
         return response()->json($enterprises);
     }
 
-    public function store(EnterpriseStoreRequest $request): JsonResponse
+    public function store(Request $request): JsonResponse
     {
-        $enterprise = $this->enterpriseService->create($request->validated());
+        $dto = CreateEnterpriseDto::fromRequest($request);
+        $enterprise = $this->enterpriseService->create($dto->toArray());
 
         return response()->json($enterprise, 201);
     }
@@ -36,9 +37,10 @@ class EnterpriseController extends Controller
         return response()->json($this->enterpriseService->findById($id));
     }
 
-    public function update(EnterpriseUpdateRequest $request, int $id): JsonResponse
+    public function update(Request $request, int $id): JsonResponse
     {
-        $enterprise = $this->enterpriseService->update($id, $request->validated());
+        $dto = UpdateEnterpriseDto::fromRequest($request);
+        $enterprise = $this->enterpriseService->update($id, $dto->toArray());
 
         return response()->json($enterprise);
     }
