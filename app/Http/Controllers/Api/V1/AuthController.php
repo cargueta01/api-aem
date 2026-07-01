@@ -2,18 +2,19 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\DTOs\Auth\AuthLoginDto;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\AuthLoginRequest;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class AuthController extends Controller
 {
-    public function login(AuthLoginRequest $request): JsonResponse
+    public function login(Request $request): JsonResponse
     {
-        $credentials = $request->validated();
+        $dto = AuthLoginDto::fromRequest($request);
 
-        if (! $token = Auth::guard('api')->attempt($credentials)) {
+        if (! $token = Auth::guard('api')->attempt($dto->toArray())) {
             return response()->json([
                 'message' => 'Invalid credentials.',
             ], 401);
